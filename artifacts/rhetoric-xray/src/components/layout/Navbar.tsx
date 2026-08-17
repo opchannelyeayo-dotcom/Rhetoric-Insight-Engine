@@ -1,10 +1,6 @@
 import { Link, useLocation } from "wouter";
-import { Shield, ExternalLink } from "lucide-react";
+import { Shield } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-
-const ADMIN_SITE_URL =
-  import.meta.env.VITE_ADMIN_SITE_URL ||
-  "https://replit.com/@gaga67/Hua-Shu-Tou-Shi-Jing-Hou-Tai";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -16,35 +12,22 @@ export function Navbar() {
           <div className="bg-primary text-white p-1.5 rounded-md">
             <Shield className="h-5 w-5" />
           </div>
-          <span className="font-serif font-bold text-lg tracking-wide text-primary hidden sm:inline-block">
-            話術透視鏡
-          </span>
-          <span className="font-serif font-bold text-lg tracking-wide text-primary sm:hidden">
-            話術透視鏡
-          </span>
+          <span className="font-serif font-bold text-lg tracking-wide text-primary hidden sm:inline-block">話術透視鏡</span>
+          <span className="font-serif font-bold text-lg tracking-wide text-primary sm:hidden">話術透視鏡</span>
         </Link>
         <nav className="ml-auto flex items-center gap-2 sm:gap-4">
           <Link
             href="/history"
-            className={
-              buttonVariants({
-                variant: location === "/history" ? "secondary" : "ghost",
-                size: "sm",
-              }) + " font-medium"
-            }
+            className={buttonVariants({ variant: location === "/history" ? "secondary" : "ghost", size: "sm" }) + " font-medium"}
           >
             歷史紀錄
           </Link>
-          <a
-            href={ADMIN_SITE_URL}
-            className={
-              buttonVariants({ variant: "outline", size: "sm" }) +
-              " hidden sm:flex items-center gap-1.5 font-medium text-muted-foreground border-border"
-            }
+          <Link
+            href="/admin"
+            className={buttonVariants({ variant: "outline", size: "sm" }) + " hidden sm:flex font-medium text-muted-foreground border-border"}
           >
             後台管理
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
+          </Link>
         </nav>
       </div>
     </header>

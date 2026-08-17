@@ -8,8 +8,17 @@ import NotFound from '@/pages/not-found';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import { HomePage } from '@/pages/HomePage';
 import { HistoryPage } from '@/pages/HistoryPage';
+import { AdminLoginPage } from '@/pages/admin/AdminLoginPage';
+import { AdminDashboard } from '@/pages/admin/AdminDashboard';
+import { AdminRecordsPage } from '@/pages/admin/AdminRecordsPage';
+import { AdminDrugsPage } from '@/pages/admin/AdminDrugsPage';
+import { AdminTagsPage } from '@/pages/admin/AdminTagsPage';
+import { AdminRhetoricPage } from '@/pages/admin/AdminRhetoricPage';
+import { AdminUrlQueriesPage } from '@/pages/admin/AdminUrlQueriesPage';
+import { AdminUsersPage } from '@/pages/admin/AdminUsersPage';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { AdminLayout } from '@/components/layout/AdminLayout';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,12 +43,42 @@ function Router() {
   return (
     <RoutedErrorBoundary>
       <Switch>
+        {/* Admin Routes */}
+        <Route path="/admin/login">
+          <AdminLoginPage />
+        </Route>
+
+        <Route path="/admin">
+          <AdminLayout><AdminDashboard /></AdminLayout>
+        </Route>
+        <Route path="/admin/records">
+          <AdminLayout><AdminRecordsPage /></AdminLayout>
+        </Route>
+        <Route path="/admin/drugs">
+          <AdminLayout><AdminDrugsPage /></AdminLayout>
+        </Route>
+        <Route path="/admin/tags">
+          <AdminLayout><AdminTagsPage /></AdminLayout>
+        </Route>
+        <Route path="/admin/rhetoric">
+          <AdminLayout><AdminRhetoricPage /></AdminLayout>
+        </Route>
+        <Route path="/admin/url-queries">
+          <AdminLayout><AdminUrlQueriesPage /></AdminLayout>
+        </Route>
+        <Route path="/admin/users">
+          <AdminLayout><AdminUsersPage /></AdminLayout>
+        </Route>
+
+        {/* Public Routes */}
         <Route path="/">
           <PublicLayout><HomePage /></PublicLayout>
         </Route>
         <Route path="/history">
           <PublicLayout><HistoryPage /></PublicLayout>
         </Route>
+
+        {/* Fallback */}
         <Route>
           <PublicLayout><NotFound /></PublicLayout>
         </Route>
