@@ -92,20 +92,22 @@ router.post("/admin/drugs/import", requireRole("super_admin", "content_reviewer"
     const errors: string[] = [];
     for (const r of records) {
       const rowNumber = imported + skipped + 2;
-      const name = valueOf(r, ["name", "名稱", "藥品名稱", "產品名稱"]);
+      const name = valueOf(r, ["name", "名稱", "藥品名稱", "產品名稱", "中文品名"]);
       const approvalNumber = valueOf(r, ["approvalNumber", "approval_number", "核准字號", "許可證字號"]);
-      const manufacturer = valueOf(r, ["manufacturer", "廠商", "廠商名稱", "製造商"]);
-      const category = valueOf(r, ["category", "類別", "分類"]) || "藥品";
+      const manufacturer = valueOf(r, ["manufacturer", "廠商", "廠商名稱", "製造商", "申請商"]);
+      const isHealthFoodDataset = "中文品名" in r && "許可證字號" in r;
+      const sourceCategory = valueOf(r, ["category", "類別", "分類"]);
+      const category = isHealthFoodDataset ? "健康食品" : (sourceCategory || "藥品");
       if (!name || !approvalNumber || !manufacturer) { skipped++; errors.push(`第 ${rowNumber} 行：缺少名稱、核准字號或廠商`); continue; }
       const duplicateKey = approvalNumber.toLocaleLowerCase();
       if (existing.has(duplicateKey)) { skipped++; errors.push(`第 ${rowNumber} 行：核准字號重複（${approvalNumber}）`); continue; }
       try {
         await db.insert(drugsTable).values({
           name, approvalNumber, manufacturer, category,
-          approvedDate: valueOf(r, ["approvedDate", "approved_date", "核准日期"]) || null,
-          ingredients: valueOf(r, ["ingredients", "成分", "主成分"]) || null,
-          claims: valueOf(r, ["claims", "核准適應症", "適應症", "保健功效"]) || null,
-          status: valueOf(r, ["status", "狀態"]) || "active",
+          approvedDate: valueOf(r, ["approvedDate", "approved_date", "核准日期", "核可日期"]) || null,
+          ingredients: valueOf(r, ["ingredients", "成分", "主成分", "主要成分", "保健功效相關成分"]) || null,
+          claims: valueOf(r, ["claims", "核准適應症", "適應症", "保健功效", "主要功效"]) || null,
+          status: valueOf(r, ["status", "狀態", "證況"]) === "註銷" ? "revoked" : "active",
         });
         existing.add(duplicateKey);
         imported++;

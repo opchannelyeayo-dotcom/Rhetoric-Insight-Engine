@@ -19,7 +19,7 @@ const upload = multer({
 
 // POST /api/analyze
 router.post("/analyze", async (req, res) => {
-  const { text } = req.body as { text?: string };
+  const { text, role = "consumer" } = req.body as { text?: string; role?: "seller" | "consumer" };
   if (!text || typeof text !== "string" || text.trim().length === 0) {
     res.status(400).json({ error: "請提供分析文字" });
     return;
@@ -31,7 +31,11 @@ router.post("/analyze", async (req, res) => {
 
   try {
     const aiResult = await runAiAnalysis(text);
-    const result = aiResult ?? runRulesAnalysis(text);
+    const baseResult = aiResult ?? runRulesAnalysis(text);
+    const roleAdvice = role === "seller"
+      ? "\n\n賣家決策提醒：上架或投放前，請核對核准字號、功效用語與證據來源；無法證實的療效、保證或限時施壓字句應刪除或改寫。"
+      : "\n\n消費者決策提醒：購買前請查核核准字號、成分與警語；遇到保證療效、名人背書或催促下單時，先停止交易並向官方資料庫確認。";
+    const result = { ...baseResult, healthTips: `${baseResult.healthTips}${roleAdvice}` };
 
     const summary = text.slice(0, 80).replace(/\s+/g, " ").trim();
     const tacticTypes = result.tactics.map((t) => t.type);

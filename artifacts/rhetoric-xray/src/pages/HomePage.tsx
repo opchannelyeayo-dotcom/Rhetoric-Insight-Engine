@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Shield } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Image as ImageIcon, Pill } from "lucide-react";
+import { FileText, Image as ImageIcon, Pill, Store, ShoppingBag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { AnalysisResult } from "@workspace/api-client-react";
 
@@ -15,6 +15,7 @@ import { HealthInfoAccordion } from "@/components/home/HealthInfoAccordion";
 
 export function HomePage() {
   const [activeTab, setActiveTab] = useState("text");
+  const [role, setRole] = useState<"seller" | "consumer">("consumer");
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   
   return (
@@ -51,25 +52,35 @@ export function HomePage() {
 
       {/* Main Tool Section */}
       <section className="w-full max-w-4xl mx-auto px-4 -mt-8 relative z-10">
+        <div className="grid grid-cols-2 gap-3 mb-4" aria-label="選擇使用角色">
+          <button type="button" onClick={() => { setRole("seller"); if (activeTab === "drug") setActiveTab("text"); }} className={`rounded-xl border-2 p-4 text-left transition-all ${role === "seller" ? "border-primary bg-primary text-primary-foreground shadow-lg" : "border-border bg-white hover:border-primary/40"}`}>
+            <span className="flex items-center gap-2 font-bold"><Store className="w-5 h-5" />賣家</span>
+            <span className={`block mt-1 text-xs ${role === "seller" ? "text-primary-foreground/80" : "text-muted-foreground"}`}>檢查廣告能否合規上架，優先修正高風險宣稱</span>
+          </button>
+          <button type="button" onClick={() => setRole("consumer")} className={`rounded-xl border-2 p-4 text-left transition-all ${role === "consumer" ? "border-primary bg-primary text-primary-foreground shadow-lg" : "border-border bg-white hover:border-primary/40"}`}>
+            <span className="flex items-center gap-2 font-bold"><ShoppingBag className="w-5 h-5" />消費者</span>
+            <span className={`block mt-1 text-xs ${role === "consumer" ? "text-primary-foreground/80" : "text-muted-foreground"}`}>判斷購買風險，並查核產品核准資料</span>
+          </button>
+        </div>
         <Card className="shadow-xl border-border/50 bg-white/95 backdrop-blur">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="px-2 pt-2 border-b border-border">
-              <TabsList className="w-full grid grid-cols-3 bg-transparent h-14">
+              <TabsList className={`w-full grid ${role === "consumer" ? "grid-cols-3" : "grid-cols-2"} bg-transparent h-14`}>
                 <TabsTrigger value="text" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-t-lg rounded-b-none h-full data-[state=active]:border-b-2 data-[state=active]:border-primary transition-all">
                   <FileText className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">貼上文字</span><span className="sm:hidden">文字</span>
                 </TabsTrigger>
                 <TabsTrigger value="image" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-t-lg rounded-b-none h-full data-[state=active]:border-b-2 data-[state=active]:border-primary transition-all">
                   <ImageIcon className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">上傳圖片</span><span className="sm:hidden">圖片</span>
                 </TabsTrigger>
-                <TabsTrigger value="drug" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-t-lg rounded-b-none h-full data-[state=active]:border-b-2 data-[state=active]:border-primary transition-all">
+                {role === "consumer" && <TabsTrigger value="drug" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-t-lg rounded-b-none h-full data-[state=active]:border-b-2 data-[state=active]:border-primary transition-all">
                   <Pill className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">藥品查詢</span><span className="sm:hidden">查詢</span>
-                </TabsTrigger>
+                </TabsTrigger>}
               </TabsList>
             </div>
             
             <div className="p-6">
               <TabsContent value="text" className="mt-0 outline-none">
-                <TextAnalysisTab onResult={setAnalysisResult} />
+                <TextAnalysisTab onResult={setAnalysisResult} role={role} />
               </TabsContent>
               <TabsContent value="image" className="mt-0 outline-none">
                 <ImageAnalysisTab onResult={setAnalysisResult} onSwitchToText={() => setActiveTab("text")} />
@@ -139,4 +150,3 @@ export function HomePage() {
     </div>
   );
 }
-

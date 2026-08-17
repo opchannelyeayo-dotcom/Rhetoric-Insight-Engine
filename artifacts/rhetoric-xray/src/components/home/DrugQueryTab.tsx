@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const querySchema = z.object({
   q: z.string().min(1, "請輸入搜尋關鍵字"),
@@ -19,6 +20,7 @@ const querySchema = z.object({
 export function DrugQueryTab() {
   const [hasSearched, setHasSearched] = useState(false);
   const [queryParams, setQueryParams] = useState<{q: string, category?: string} | null>(null);
+  const [selectedDrug, setSelectedDrug] = useState<DrugItem | null>(null);
 
   const form = useForm<z.infer<typeof querySchema>>({
     resolver: zodResolver(querySchema),
@@ -104,7 +106,7 @@ export function DrugQueryTab() {
         <div className="space-y-3 mt-4">
           <p className="text-sm text-muted-foreground mb-4">找到 {results.total} 筆相符結果</p>
           {results.items.map((item) => (
-            <Card key={item.id} className="overflow-hidden border-border/50 hover:border-primary/30 transition-colors">
+            <Card key={item.id} role="button" tabIndex={0} onClick={() => setSelectedDrug(item)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedDrug(item); }} className="overflow-hidden border-border/50 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
               <CardContent className="p-4 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -121,6 +123,7 @@ export function DrugQueryTab() {
                     {item.claims}
                   </div>
                 )}
+                <span className="text-xs text-primary font-medium whitespace-nowrap">查看詳細內容</span>
               </CardContent>
             </Card>
           ))}
@@ -131,6 +134,20 @@ export function DrugQueryTab() {
           <p className="text-sm">如果此產品宣稱具有療效或保健功效，卻查無資料，請提高警覺。</p>
         </div>
       )}
+      <Dialog open={!!selectedDrug} onOpenChange={(open) => !open && setSelectedDrug(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>{selectedDrug?.name}</DialogTitle><DialogDescription>官方核准資料詳細內容</DialogDescription></DialogHeader>
+          {selectedDrug && <dl className="grid sm:grid-cols-[140px_1fr] gap-x-4 gap-y-3 text-sm">
+            <dt className="font-semibold text-muted-foreground">分類</dt><dd>{selectedDrug.category}</dd>
+            <dt className="font-semibold text-muted-foreground">核准字號</dt><dd className="font-mono">{selectedDrug.approvalNumber}</dd>
+            <dt className="font-semibold text-muted-foreground">申請商／廠商</dt><dd>{selectedDrug.manufacturer}</dd>
+            <dt className="font-semibold text-muted-foreground">核准日期</dt><dd>{selectedDrug.approvedDate || "未提供"}</dd>
+            <dt className="font-semibold text-muted-foreground">主要成分</dt><dd className="whitespace-pre-wrap">{selectedDrug.ingredients || "未提供"}</dd>
+            <dt className="font-semibold text-muted-foreground">核准功效／適應症</dt><dd className="whitespace-pre-wrap">{selectedDrug.claims || "未提供"}</dd>
+            <dt className="font-semibold text-muted-foreground">證況</dt><dd>{selectedDrug.status === "active" ? "有效" : "已註銷"}</dd>
+          </dl>}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

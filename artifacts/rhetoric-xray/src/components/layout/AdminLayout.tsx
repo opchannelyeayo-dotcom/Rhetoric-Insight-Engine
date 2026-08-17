@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useGetAdminMe, useAdminLogout } from "@workspace/api-client-react";
-import { Shield, LayoutDashboard, FileText, Pill, Tags, SearchCheck, Link2, Users, LogOut, Menu, Loader2 } from "lucide-react";
+import { Shield, LayoutDashboard, FileText, Pill, Tags, SearchCheck, Link2, Users, LogOut, Menu, Loader2, Home } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
@@ -50,6 +50,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   const navItems = [
+    { name: "回到首頁", path: "/", icon: Home },
     { name: "儀表板", path: "/admin", icon: LayoutDashboard },
     { name: "分析紀錄", path: "/admin/records", icon: FileText },
     { name: "藥品資料庫", path: "/admin/drugs", icon: Pill },

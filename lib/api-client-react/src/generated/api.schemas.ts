@@ -31,6 +31,7 @@ export interface AnalyzeInput {
      * @maxLength 6000
      */
   text: string;
+  role?: 'seller' | 'consumer';
 }
 
 export type ManipulationTacticSeverity = typeof ManipulationTacticSeverity[keyof typeof ManipulationTacticSeverity];
@@ -509,4 +510,3 @@ export type GetAdminUsersParams = {
 page?: number;
 limit?: number;
 };
-

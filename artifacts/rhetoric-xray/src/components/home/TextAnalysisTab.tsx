@@ -12,7 +12,7 @@ const textSchema = z.object({
   text: z.string().min(10, "請至少輸入 10 個字").max(6000, "不能超過 6000 字"),
 });
 
-export function TextAnalysisTab({ onResult }: { onResult: (r: AnalysisResult) => void }) {
+export function TextAnalysisTab({ onResult, role }: { onResult: (r: AnalysisResult) => void; role: "seller" | "consumer" }) {
   const form = useForm<z.infer<typeof textSchema>>({
     resolver: zodResolver(textSchema),
     defaultValues: { text: "" },
@@ -23,7 +23,7 @@ export function TextAnalysisTab({ onResult }: { onResult: (r: AnalysisResult) =>
 
   const onSubmit = (data: z.infer<typeof textSchema>) => {
     analyzeMutation.mutate(
-      { data: { text: data.text } },
+      { data: { text: data.text, role } },
       {
         onSuccess: (result) => {
           onResult(result);

@@ -72,6 +72,23 @@ export function AdminDrugsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    await importFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const importBundledHealthFoods = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}health-foods.csv`);
+      if (!response.ok) throw new Error("dataset unavailable");
+      const file = new File([await response.blob()], "健康食品(簡化版).csv", { type: "text/csv" });
+      await importFile(file);
+    } catch {
+      toast.error("內建健康食品資料載入失敗");
+    }
+  };
+
+  const importFile = async (file: File) => {
+
     if (!file.name.endsWith('.csv')) {
       toast.error("請上傳 CSV 格式的檔案");
       return;
@@ -101,7 +118,6 @@ export function AdminDrugsPage() {
       toast.error("上傳失敗，請稍後再試");
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -274,6 +290,7 @@ export function AdminDrugsPage() {
             <FileDown className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="mb-4 text-sm text-muted-foreground">點擊下方按鈕選擇檔案上傳</p>
             <div className="flex flex-wrap justify-center gap-2">
+              <Button onClick={importBundledHealthFoods} disabled={isUploading}>匯入內建 464 筆健康食品</Button>
               <Button variant="outline" onClick={downloadTemplate} disabled={isUploading}>下載範例 CSV</Button>
               <Button onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
                 {isUploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> 上傳處理中...</> : "選擇 CSV 檔案"}

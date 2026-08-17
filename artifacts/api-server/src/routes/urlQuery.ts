@@ -91,7 +91,8 @@ router.post("/url-query", async (req, res) => {
 
   let parsedUrl: URL;
   try {
-    parsedUrl = new URL(url.trim());
+    const candidate = /^[a-z][a-z\d+.-]*:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
+    parsedUrl = new URL(candidate);
     if (!["http:", "https:"].includes(parsedUrl.protocol))
       throw new Error("unsupported protocol");
   } catch {

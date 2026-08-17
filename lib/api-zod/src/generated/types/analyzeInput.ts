@@ -12,4 +12,5 @@ export interface AnalyzeInput {
      * @maxLength 6000
      */
   text: string;
+  role?: 'seller' | 'consumer';
 }

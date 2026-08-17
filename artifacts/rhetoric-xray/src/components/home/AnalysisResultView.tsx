@@ -8,8 +8,17 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { normalizeAnalysisResult } from "@/lib/normalize-analysis";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const REGIONAL_LAWS = {
+  台灣: "《健康食品管理法》第 14、15 條：廣告不得虛偽不實、誇張，且不得宣稱醫療效能；涉及核准功效時應與許可內容一致。違規可能遭停止刊播、沒入及罰鍰。",
+  香港: "《不良醫藥廣告條例》（第 231 章）：禁止或限制廣告聲稱可預防、治療指定疾病或病理狀況；即使以食品或保健品名義銷售，也可能受規管。",
+  澳門: "第 30/95/M 號法令：藥物廣告原則上須事先獲准，不得保證療效、淡化副作用、暗示毋須求醫或使用未經科學證實的功效。",
+  韓國: "《食品等標示・廣告法》及《健康機能食品法》：不得刊登虛假、誇大或使健康機能食品被誤認為可預防或治療疾病的廣告。",
+} as const;
 
 export function AnalysisResultView({ result: rawResult }: { result: AnalysisResult }) {
+  const [region, setRegion] = useState<keyof typeof REGIONAL_LAWS>("台灣");
   const result = normalizeAnalysisResult(rawResult);
   if (!result) {
     return <Card className="p-6 text-destructive">分析結果格式錯誤，請重新執行分析。</Card>;
@@ -95,6 +104,17 @@ export function AnalysisResultView({ result: rawResult }: { result: AnalysisResu
       </div>
 
       <CardContent className="p-0">
+        <div className="p-5 border-b bg-red-50/70">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
+            <label className="font-bold text-red-900 whitespace-nowrap">地區</label>
+            <Select value={region} onValueChange={(value) => setRegion(value as keyof typeof REGIONAL_LAWS)}>
+              <SelectTrigger className="w-full sm:w-52 bg-white"><SelectValue /></SelectTrigger>
+              <SelectContent>{Object.keys(REGIONAL_LAWS).map((name) => <SelectItem key={name} value={name}>{name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <p className="text-sm leading-relaxed text-red-900"><strong>相關違反法規提醒：</strong>{REGIONAL_LAWS[region]}</p>
+          <p className="text-xs text-red-700 mt-2">此為警示性摘要，實際適用條文與處分仍應依主管機關最新公告及個案事實判定。</p>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border">
           {/* Left Column: Annotated Text */}
           <div className="p-6">
