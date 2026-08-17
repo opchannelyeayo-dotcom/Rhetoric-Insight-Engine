@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "話術透視鏡"
+description = "一個繁體中文健康廣告話術分析平台，可分析廣告文字或圖片，辨識行銷陷阱與操縱手法，提供信任度評分與健康消費提醒。包含藥品查詢、歷史紀錄、後台管理等功能。"
+version = "1.0.0"
+id = "artifacts/rhetoric-xray"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21905
+
+[services.development]
+run = "pnpm --filter @workspace/rhetoric-xray run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/rhetoric-xray", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/rhetoric-xray/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21905"
+BASE_PATH = "/"

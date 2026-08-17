@@ -1,0 +1,1 @@
+- [話術透視鏡 Architecture](rhetoric-xray-arch.md) — key decisions: zod v3 fix, bcrypt seed, DB build step, session auth pattern

@@ -3,20 +3,29 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: 話術透視鏡 API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: analysis
+    description: 廣告話術分析
+  - name: history
+    description: 歷史紀錄
+  - name: drug
+    description: 藥品查詢
+  - name: url
+    description: 網址安全查詢
+  - name: admin
+    description: 後台管理
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +33,920 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── 公開：廣告話術分析 ───
+  /analyze:
+    post:
+      operationId: analyzeText
+      tags: [analysis]
+      summary: 分析廣告話術文字
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeInput"
+      responses:
+        "200":
+          description: 分析結果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisResult"
+        "400":
+          description: 輸入錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /upload-image:
+    post:
+      operationId: uploadImage
+      tags: [analysis]
+      summary: 上傳廣告圖片並擷取文字（multipart，直接在 Express 處理）
+      responses:
+        "200":
+          description: OCR 擷取結果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImageOcrResult"
+        "400":
+          description: 上傳錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── 公開：藥品查詢 ───
+  /drug-query:
+    get:
+      operationId: drugQuery
+      tags: [drug]
+      summary: 查詢藥品或保健品資訊
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 查詢結果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DrugQueryResult"
+
+  # ─── 公開：網址安全查詢 ───
+  /url-query:
+    post:
+      operationId: urlQuery
+      tags: [url]
+      summary: 公開網址安全查詢
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UrlQueryInput"
+      responses:
+        "200":
+          description: 查詢結果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UrlQueryResult"
+        "400":
+          description: 輸入錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── 公開：歷史紀錄 ───
+  /history:
+    get:
+      operationId: getHistory
+      tags: [history]
+      summary: 取得歷史紀錄列表
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: 歷史紀錄列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoryListResult"
+
+  /history/stats:
+    get:
+      operationId: getHistoryStats
+      tags: [history]
+      summary: 取得歷史統計數據
+      responses:
+        "200":
+          description: 統計數據
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoryStats"
+
+  /history/{id}:
+    get:
+      operationId: getHistoryById
+      tags: [history]
+      summary: 取得單筆歷史紀錄詳情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 歷史紀錄詳情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoryRecord"
+        "404":
+          description: 找不到紀錄
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteHistory
+      tags: [history]
+      summary: 刪除歷史紀錄
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 刪除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResult"
+        "404":
+          description: 找不到紀錄
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── 後台：Auth ───
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: 後台管理員登入
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginInput"
+      responses:
+        "200":
+          description: 登入成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminLoginResult"
+        "401":
+          description: 帳號或密碼錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/logout:
+    post:
+      operationId: adminLogout
+      tags: [admin]
+      summary: 後台管理員登出
+      responses:
+        "200":
+          description: 登出成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResult"
+
+  /admin/me:
+    get:
+      operationId: getAdminMe
+      tags: [admin]
+      summary: 取得目前登入狀態
+      responses:
+        "200":
+          description: 登入資訊
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminMe"
+        "401":
+          description: 未登入
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── 後台：儀表板 ───
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: 取得後台統計數據
+      responses:
+        "200":
+          description: 後台統計
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── 後台：分析紀錄管理 ───
+  /admin/records:
+    get:
+      operationId: getAdminRecords
+      tags: [admin]
+      summary: 取得所有分析紀錄（管理員）
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: riskLevel
+          in: query
+          schema:
+            type: string
+        - name: inputType
+          in: query
+          schema:
+            type: string
+        - name: tacticType
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, oldest, trustAsc, trustDesc]
+      responses:
+        "200":
+          description: 紀錄列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoryListResult"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/records/export:
+    get:
+      operationId: exportAdminRecords
+      tags: [admin]
+      summary: 匯出分析紀錄 CSV
+      responses:
+        "200":
+          description: CSV 檔案
+          content:
+            text/csv:
+              schema:
+                type: string
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/records/{id}:
+    get:
+      operationId: getAdminRecordById
+      tags: [admin]
+      summary: 取得單筆分析紀錄詳情（管理員）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 紀錄詳情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoryRecord"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteAdminRecord
+      tags: [admin]
+      summary: 刪除指定紀錄（管理員）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 刪除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResult"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到紀錄
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── 後台：藥品資料庫 ───
+  /admin/drugs:
+    get:
+      operationId: getAdminDrugs
+      tags: [admin]
+      summary: 取得藥品資料庫列表
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 藥品列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DrugListResult"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createDrug
+      tags: [admin]
+      summary: 新增藥品資料
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DrugInput"
+      responses:
+        "201":
+          description: 新增成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DrugItem"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/drugs/import:
+    post:
+      operationId: importDrugs
+      tags: [admin]
+      summary: CSV 匯入藥品資料（multipart，直接在 Express 處理）
+      responses:
+        "200":
+          description: 匯入結果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/drugs/{id}:
+    put:
+      operationId: updateDrug
+      tags: [admin]
+      summary: 編輯藥品資料
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DrugInput"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DrugItem"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteDrug
+      tags: [admin]
+      summary: 刪除藥品資料
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 刪除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResult"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── 後台：話術風險標籤 ───
+  /admin/tags:
+    get:
+      operationId: getAdminTags
+      tags: [admin]
+      summary: 取得話術風險標籤列表
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: tacticType
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: region
+          in: query
+          schema:
+            type: string
+        - name: group
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 標籤列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagListResult"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createTag
+      tags: [admin]
+      summary: 新增話術風險標籤
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagInput"
+      responses:
+        "201":
+          description: 新增成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RhetoricTag"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/tags/export:
+    get:
+      operationId: exportAdminTags
+      tags: [admin]
+      summary: 匯出話術標籤 CSV
+      responses:
+        "200":
+          description: CSV 檔案
+          content:
+            text/csv:
+              schema:
+                type: string
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/tags/{id}:
+    get:
+      operationId: getAdminTagById
+      tags: [admin]
+      summary: 取得單筆話術標籤詳情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 標籤詳情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RhetoricTag"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateTag
+      tags: [admin]
+      summary: 編輯話術風險標籤
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagInput"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RhetoricTag"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteTag
+      tags: [admin]
+      summary: 刪除話術風險標籤
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 刪除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResult"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── 後台：話術風險分析工具 ───
+  /admin/rhetoric-analyze:
+    post:
+      operationId: rhetoricalAnalyze
+      tags: [admin]
+      summary: 後台話術風險分析
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RhetoricalAnalyzeInput"
+      responses:
+        "200":
+          description: 分析結果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RhetoricalAnalyzeResult"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── 後台：網址查詢紀錄 ───
+  /admin/url-queries:
+    get:
+      operationId: getAdminUrlQueries
+      tags: [admin]
+      summary: 取得網址查詢紀錄列表
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 查詢紀錄列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UrlQueryListResult"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/url-queries/clear-test:
+    delete:
+      operationId: clearTestUrlQueries
+      tags: [admin]
+      summary: 清除測試用網址查詢紀錄
+      responses:
+        "200":
+          description: 清除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResult"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── 後台：使用者管理 ───
+  /admin/users:
+    get:
+      operationId: getAdminUsers
+      tags: [admin]
+      summary: 取得使用者列表
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: 使用者列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResult"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createAdminUser
+      tags: [admin]
+      summary: 新增管理員帳號
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserInput"
+      responses:
+        "201":
+          description: 新增成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/users/{id}:
+    patch:
+      operationId: updateAdminUser
+      tags: [admin]
+      summary: 更新管理員帳號（啟用/停用/角色）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserInput"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteAdminUser
+      tags: [admin]
+      summary: 刪除管理員帳號
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 刪除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResult"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +954,560 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    SuccessResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required: [success]
+
+    ImportResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        imported:
+          type: integer
+        skipped:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
+      required: [success, imported, skipped]
+
+    # ─── 分析 ───
+    AnalyzeInput:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 6000
+
+    ManipulationTactic:
+      type: object
+      required: [type, label, description, examples, severity]
+      properties:
+        type:
+          type: string
+        label:
+          type: string
+        description:
+          type: string
+        examples:
+          type: array
+          items:
+            type: string
+        severity:
+          type: string
+          enum: [low, medium, high]
+
+    AnnotatedSegment:
+      type: object
+      required: [text, start, end, isSuspicious]
+      properties:
+        text:
+          type: string
+        start:
+          type: integer
+        end:
+          type: integer
+        tacticType:
+          type: ["string", "null"]
+        tacticLabel:
+          type: ["string", "null"]
+        isSuspicious:
+          type: boolean
+
+    AnalysisResult:
+      type: object
+      required: [id, trustScore, riskLevel, riskReason, tactics, segments, factCheck, healthTips, analysisMode, createdAt]
+      properties:
+        id:
+          type: integer
+        trustScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        riskLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        riskReason:
+          type: string
+        tactics:
+          type: array
+          items:
+            $ref: "#/components/schemas/ManipulationTactic"
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnnotatedSegment"
+        factCheck:
+          type: string
+        healthTips:
+          type: string
+        analysisMode:
+          type: string
+          enum: [ai, rules]
+        aiAvailable:
+          type: boolean
+        createdAt:
+          type: string
+
+    ImageOcrResult:
+      type: object
+      required: [extractedText, success]
+      properties:
+        extractedText:
+          type: string
+        success:
+          type: boolean
+        message:
+          type: ["string", "null"]
+
+    # ─── 藥品 ───
+    DrugItem:
+      type: object
+      required: [id, name, approvalNumber, manufacturer, category, status, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        approvalNumber:
+          type: string
+        manufacturer:
+          type: string
+        category:
+          type: string
+        approvedDate:
+          type: ["string", "null"]
+        ingredients:
+          type: ["string", "null"]
+        claims:
+          type: ["string", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+
+    DrugInput:
+      type: object
+      required: [name, approvalNumber, manufacturer, category]
+      properties:
+        name:
+          type: string
+        approvalNumber:
+          type: string
+        manufacturer:
+          type: string
+        category:
+          type: string
+        approvedDate:
+          type: ["string", "null"]
+        ingredients:
+          type: ["string", "null"]
+        claims:
+          type: ["string", "null"]
+        status:
+          type: string
+
+    DrugQueryResult:
+      type: object
+      required: [query, total, items]
+      properties:
+        query:
+          type: string
+        total:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DrugItem"
+
+    DrugListResult:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DrugItem"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    # ─── 話術標籤 ───
+    RhetoricTag:
+      type: object
+      required: [id, label, tacticType, group, status, createdAt]
+      properties:
+        id:
+          type: integer
+        label:
+          type: string
+        tacticType:
+          type: string
+        group:
+          type: string
+        status:
+          type: string
+          enum: [draft, pending, approved, needs_revision]
+        region:
+          type: ["string", "null"]
+        legalBasis:
+          type: ["string", "null"]
+        historicalCases:
+          type: ["string", "null"]
+        suggestedRewrite:
+          type: ["string", "null"]
+        riskOverride:
+          type: ["string", "null"]
+        verificationStatus:
+          type: ["string", "null"]
+        needsReview:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    TagInput:
+      type: object
+      required: [label, tacticType, group, status]
+      properties:
+        label:
+          type: string
+        tacticType:
+          type: string
+        group:
+          type: string
+        status:
+          type: string
+          enum: [draft, pending, approved, needs_revision]
+        region:
+          type: ["string", "null"]
+        legalBasis:
+          type: ["string", "null"]
+        historicalCases:
+          type: ["string", "null"]
+        suggestedRewrite:
+          type: ["string", "null"]
+        riskOverride:
+          type: ["string", "null"]
+        verificationStatus:
+          type: ["string", "null"]
+        needsReview:
+          type: boolean
+
+    TagListResult:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RhetoricTag"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    # ─── 話術風險分析工具 ───
+    RhetoricalAnalyzeInput:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 6000
+        scene:
+          type: string
+          enum: [sales, customer_service, medical, livestream, social_post]
+
+    RhetoricalAnalyzeResult:
+      type: object
+      required: [riskTags, judgment, rewriteSuggestion, laws, cases]
+      properties:
+        riskTags:
+          type: array
+          items:
+            type: string
+        judgment:
+          type: string
+        rewriteSuggestion:
+          type: string
+        laws:
+          type: array
+          items:
+            type: string
+        cases:
+          type: array
+          items:
+            type: string
+
+    # ─── 網址查詢 ───
+    UrlQueryInput:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+
+    UrlQueryRecord:
+      type: object
+      required: [id, url, status, reason, createdAt]
+      properties:
+        id:
+          type: integer
+        url:
+          type: string
+        status:
+          type: string
+          enum: [safe, suspicious, high_risk, unknown]
+        reason:
+          type: string
+        isTest:
+          type: boolean
+        createdAt:
+          type: string
+
+    UrlQueryResult:
+      type: object
+      required: [url, status, reason]
+      properties:
+        url:
+          type: string
+        status:
+          type: string
+          enum: [safe, suspicious, high_risk, unknown]
+        reason:
+          type: string
+
+    UrlQueryListResult:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UrlQueryRecord"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    # ─── 歷史紀錄 ───
+    HistoryRecord:
+      type: object
+      required: [id, inputType, inputSummary, trustScore, riskLevel, createdAt]
+      properties:
+        id:
+          type: integer
+        inputType:
+          type: string
+          enum: [text, image]
+        inputSummary:
+          type: string
+        trustScore:
+          type: integer
+        riskLevel:
+          type: string
+        analysisResult:
+          description: 完整分析結果 JSON
+        createdAt:
+          type: string
+
+    HistoryListResult:
+      type: object
+      required: [records, total, page, limit]
+      properties:
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistoryRecord"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    HistoryStats:
+      type: object
+      required: [total, byRiskLevel, avgTrustScore, recentCount]
+      properties:
+        total:
+          type: integer
+        byRiskLevel:
+          type: object
+          properties:
+            low: { type: integer }
+            medium: { type: integer }
+            high: { type: integer }
+            critical: { type: integer }
+        avgTrustScore:
+          type: number
+        recentCount:
+          type: integer
+
+    # ─── 後台統計 ───
+    AdminStats:
+      type: object
+      required: [totalRecords, todayRecords, byRiskLevel, byInputType, avgTrustScore, recentActivity, totalTags, pendingTags, totalDrugs, totalUrlQueries, byRegion, dailyTrustTrend, totalDetectedTactics, byTacticType]
+      properties:
+        totalRecords:
+          type: integer
+        todayRecords:
+          type: integer
+        byRiskLevel:
+          type: object
+          properties:
+            low: { type: integer }
+            medium: { type: integer }
+            high: { type: integer }
+            critical: { type: integer }
+        byInputType:
+          type: object
+          properties:
+            text: { type: integer }
+            image: { type: integer }
+        avgTrustScore:
+          type: number
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistoryRecord"
+        totalTags:
+          type: integer
+        pendingTags:
+          type: integer
+        totalDrugs:
+          type: integer
+        totalUrlQueries:
+          type: integer
+        byRegion:
+          type: object
+        dailyTrustTrend:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string }
+              avgTrust: { type: number }
+              count: { type: integer }
+        totalDetectedTactics:
+          type: integer
+        byTacticType:
+          type: object
+
+    # ─── 後台：Auth ───
+    AdminLoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    AdminLoginResult:
+      type: object
+      required: [success, message, user]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        user:
+          $ref: "#/components/schemas/AdminMe"
+
+    AdminMe:
+      type: object
+      required: [loggedIn, username, role]
+      properties:
+        loggedIn:
+          type: boolean
+        username:
+          type: string
+        role:
+          type: string
+          enum: [super_admin, content_reviewer, readonly]
+
+    # ─── 使用者管理 ───
+    AdminUser:
+      type: object
+      required: [id, username, role, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        role:
+          type: string
+          enum: [super_admin, content_reviewer, readonly]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+        lastLogin:
+          type: ["string", "null"]
+
+    CreateUserInput:
+      type: object
+      required: [username, password, role]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [super_admin, content_reviewer, readonly]
+
+    UpdateUserInput:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [super_admin, content_reviewer, readonly]
+        isActive:
+          type: boolean
+        password:
+          type: string
+
+    UserListResult:
+      type: object
+      required: [users, total, page, limit]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminUser"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
