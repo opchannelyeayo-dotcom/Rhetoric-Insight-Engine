@@ -84,16 +84,18 @@ export function AdminDrugsPage() {
     try {
       const res = await fetch("/api/admin/drugs/import", {
         method: "POST",
+        credentials: "include",
         body: formData,
       });
       const result = await res.json();
       
       if (res.ok && result.success) {
-        toast.success(`匯入成功：新增 ${result.imported} 筆，跳過 ${result.skipped} 筆`);
+        const detail = result.errors?.length ? `；${result.errors.slice(0, 3).join("、")}` : "";
+        toast.success(`匯入完成：新增 ${result.imported} 筆，跳過 ${result.skipped} 筆${detail}`);
         queryClient.invalidateQueries({ queryKey: ["adminDrugs"] });
         setIsImportModalOpen(false);
       } else {
-        toast.error(result.message || "匯入失敗");
+        toast.error(result.error || result.message || "匯入失敗");
       }
     } catch (err: any) {
       toast.error("上傳失敗，請稍後再試");
@@ -101,6 +103,16 @@ export function AdminDrugsPage() {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const downloadTemplate = () => {
+    const csv = "\uFEFFname,approvalNumber,manufacturer,category,approvedDate,ingredients,claims,status\n範例藥品,衛部藥製字第000000號,範例藥廠,藥品,2026-01-01,範例成分,範例適應症,active\n";
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "drug-import-template.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -248,7 +260,7 @@ export function AdminDrugsPage() {
           <DialogHeader>
             <DialogTitle>批次匯入藥品資料</DialogTitle>
             <DialogDescription>
-              請上傳包含 name, approvalNumber, manufacturer, category 欄位的 CSV 檔案。
+              支援 UTF-8 或 Big5 CSV。必要欄位為名稱、核准字號與廠商，可使用中英文欄位名稱。
             </DialogDescription>
           </DialogHeader>
           <div className="p-6 border-2 border-dashed rounded-lg text-center bg-muted/20">
@@ -261,9 +273,12 @@ export function AdminDrugsPage() {
             />
             <FileDown className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="mb-4 text-sm text-muted-foreground">點擊下方按鈕選擇檔案上傳</p>
-            <Button onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
-              {isUploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> 上傳處理中...</> : "選擇 CSV 檔案"}
-            </Button>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button variant="outline" onClick={downloadTemplate} disabled={isUploading}>下載範例 CSV</Button>
+              <Button onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+                {isUploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> 上傳處理中...</> : "選擇 CSV 檔案"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

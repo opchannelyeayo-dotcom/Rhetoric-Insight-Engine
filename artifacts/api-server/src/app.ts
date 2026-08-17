@@ -12,6 +12,12 @@ const PgSession = connectPgSimple(session);
 
 const app: Express = express();
 
+// Replit terminates HTTPS at its reverse proxy. Trust the first proxy so
+// express-session can correctly issue secure cookies in production.
+if (process.env["NODE_ENV"] === "production") {
+  app.set("trust proxy", 1);
+}
+
 app.use(
   pinoHttp({
     logger,

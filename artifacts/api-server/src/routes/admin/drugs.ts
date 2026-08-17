@@ -7,7 +7,29 @@ import { desc, eq, and, or, ilike, count } from "drizzle-orm";
 import { requireAuth, requireRole } from "../../lib/auth";
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    callback(null, file.originalname.toLowerCase().endsWith(".csv"));
+  },
+});
+
+function decodeCsv(buffer: Buffer): string {
+  const utf8 = new TextDecoder("utf-8").decode(buffer).replace(/^\uFEFF/, "");
+  const replacementCount = (utf8.match(/�/g) ?? []).length;
+  if (replacementCount === 0) return utf8;
+  // Many Taiwan government exports and older Excel files use Big5/CP950.
+  return new TextDecoder("big5").decode(buffer).replace(/^\uFEFF/, "");
+}
+
+function valueOf(row: Record<string, string>, aliases: string[]): string {
+  for (const alias of aliases) {
+    const value = row[alias]?.trim();
+    if (value) return value;
+  }
+  return "";
+}
 
 router.get("/admin/drugs", requireAuth, async (req, res) => {
   const page = Math.max(1, parseInt(String(req.query.page ?? "1")));
@@ -52,26 +74,47 @@ router.post("/admin/drugs", requireRole("super_admin", "content_reviewer"), asyn
 router.post("/admin/drugs/import", requireRole("super_admin", "content_reviewer"), upload.single("file"), async (req, res) => {
   if (!req.file) { res.status(400).json({ error: "請上傳 CSV 檔案" }); return; }
   try {
-    const text = req.file.buffer.toString("utf-8").replace(/^\uFEFF/, "");
-    const records = parse(text, { columns: true, skip_empty_lines: true, trim: true }) as Record<string, string>[];
+    const text = decodeCsv(req.file.buffer);
+    const records = parse(text, {
+      columns: (headers: string[]) => headers.map((header) => header.replace(/^\uFEFF/, "").trim()),
+      skip_empty_lines: true,
+      trim: true,
+      relax_column_count: true,
+    }) as Record<string, string>[];
+    if (records.length === 0) {
+      res.status(400).json({ error: "CSV 沒有可匯入的資料" });
+      return;
+    }
+    const existing = new Set((await db.select({ approvalNumber: drugsTable.approvalNumber }).from(drugsTable))
+      .map((row) => row.approvalNumber.trim().toLocaleLowerCase()));
     let imported = 0;
     let skipped = 0;
     const errors: string[] = [];
     for (const r of records) {
-      const name = r["name"] || r["名稱"] || r["藥品名稱"] || "";
-      const approvalNumber = r["approvalNumber"] || r["核准字號"] || "";
-      const manufacturer = r["manufacturer"] || r["廠商"] || "";
-      const category = r["category"] || r["類別"] || "保健品";
-      if (!name || !approvalNumber || !manufacturer) { skipped++; errors.push(`行 ${imported + skipped}: 缺少必要欄位`); continue; }
+      const rowNumber = imported + skipped + 2;
+      const name = valueOf(r, ["name", "名稱", "藥品名稱", "產品名稱"]);
+      const approvalNumber = valueOf(r, ["approvalNumber", "approval_number", "核准字號", "許可證字號"]);
+      const manufacturer = valueOf(r, ["manufacturer", "廠商", "廠商名稱", "製造商"]);
+      const category = valueOf(r, ["category", "類別", "分類"]) || "藥品";
+      if (!name || !approvalNumber || !manufacturer) { skipped++; errors.push(`第 ${rowNumber} 行：缺少名稱、核准字號或廠商`); continue; }
+      const duplicateKey = approvalNumber.toLocaleLowerCase();
+      if (existing.has(duplicateKey)) { skipped++; errors.push(`第 ${rowNumber} 行：核准字號重複（${approvalNumber}）`); continue; }
       try {
-        await db.insert(drugsTable).values({ name, approvalNumber, manufacturer, category, approvedDate: r["approvedDate"] || r["核准日期"] || null, ingredients: r["ingredients"] || r["成分"] || null, claims: r["claims"] || r["核准適應症"] || null, status: "active" });
+        await db.insert(drugsTable).values({
+          name, approvalNumber, manufacturer, category,
+          approvedDate: valueOf(r, ["approvedDate", "approved_date", "核准日期"]) || null,
+          ingredients: valueOf(r, ["ingredients", "成分", "主成分"]) || null,
+          claims: valueOf(r, ["claims", "核准適應症", "適應症", "保健功效"]) || null,
+          status: valueOf(r, ["status", "狀態"]) || "active",
+        });
+        existing.add(duplicateKey);
         imported++;
-      } catch { skipped++; errors.push(`行 ${imported + skipped}: 資料重複或格式錯誤`); }
+      } catch { skipped++; errors.push(`第 ${rowNumber} 行：資料格式錯誤`); }
     }
     res.json({ success: true, imported, skipped, errors });
   } catch (err) {
     req.log.error(err, "admin drug import error");
-    res.status(500).json({ error: "匯入失敗" });
+    res.status(400).json({ error: "CSV 格式不正確，請確認欄位與引號格式" });
   }
 });
 

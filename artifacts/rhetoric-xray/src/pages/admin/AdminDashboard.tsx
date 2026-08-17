@@ -37,10 +37,18 @@ export function AdminDashboard() {
   ];
 
   // Format tactic type data
+  const tacticLabels: Record<string, string> = {
+    false_urgency: "虛假緊迫感",
+    exaggerated_claims: "誇大療效",
+    emotional_manipulation: "情緒操控",
+    social_proof: "社會認同",
+    fear_appeal: "恐懼訴求",
+    scarcity_manipulation: "稀缺性操控",
+  };
   const tacticData = Object.entries(stats.byTacticType || {}).map(([key, value]) => ({
-    name: key,
+    name: tacticLabels[key] ?? key,
     value: Number(value)
-  })).sort((a, b) => b.value - a.value).slice(0, 6);
+  })).sort((a, b) => b.value - a.value).slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -156,7 +164,7 @@ export function AdminDashboard() {
 
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="text-sm font-serif">六大話術分佈</CardTitle>
+            <CardTitle className="text-sm font-serif">常見話術類型 Top 5</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px] flex items-center justify-center">
             {tacticData.length > 0 ? (

@@ -7,8 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { normalizeAnalysisResult } from "@/lib/normalize-analysis";
 
-export function AnalysisResultView({ result }: { result: AnalysisResult }) {
+export function AnalysisResultView({ result: rawResult }: { result: AnalysisResult }) {
+  const result = normalizeAnalysisResult(rawResult);
+  if (!result) {
+    return <Card className="p-6 text-destructive">分析結果格式錯誤，請重新執行分析。</Card>;
+  }
   const getRiskColor = (level: string) => {
     switch (level) {
       case "low": return "text-green-600 bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-900";

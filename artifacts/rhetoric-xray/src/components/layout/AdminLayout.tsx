@@ -5,7 +5,7 @@ import { Shield, LayoutDashboard, FileText, Pill, Tags, SearchCheck, Link2, User
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { QueryClient, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -32,7 +32,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         toast.success("已登出");
       },
       onError: () => {
-        setLocation("/admin/login");
+        toast.error("登出失敗，請稍後再試");
       }
     });
   };

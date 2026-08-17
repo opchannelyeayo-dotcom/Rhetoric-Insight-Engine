@@ -52,7 +52,17 @@ router.post("/admin/login", async (req, res) => {
 });
 
 router.post("/admin/logout", (req, res) => {
-  req.session.destroy(() => {
+  req.session.destroy((err) => {
+    if (err) {
+      req.log.error(err, "admin logout error");
+      res.status(500).json({ error: "登出失敗，請稍後再試" });
+      return;
+    }
+    res.clearCookie("connect.sid", {
+      httpOnly: true,
+      secure: process.env["NODE_ENV"] === "production",
+      sameSite: process.env["NODE_ENV"] === "production" ? "none" : "lax",
+    });
     res.json({ success: true, message: "已登出" });
   });
 });

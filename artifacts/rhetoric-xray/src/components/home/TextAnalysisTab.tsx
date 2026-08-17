@@ -1,4 +1,3 @@
-import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -7,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Loader2, SearchCheck } from "lucide-react";
+import { toast } from "sonner";
 
 const textSchema = z.object({
   text: z.string().min(10, "請至少輸入 10 個字").max(6000, "不能超過 6000 字"),
@@ -29,7 +29,8 @@ export function TextAnalysisTab({ onResult }: { onResult: (r: AnalysisResult) =>
           onResult(result);
           // Scroll down smoothly
           window.scrollTo({ top: window.scrollY + 400, behavior: 'smooth' });
-        }
+        },
+        onError: (error) => toast.error(error.message || "分析失敗，請稍後再試"),
       }
     );
   };
@@ -62,7 +63,7 @@ export function TextAnalysisTab({ onResult }: { onResult: (r: AnalysisResult) =>
           <Button 
             type="submit" 
             size="lg" 
-            disabled={!textValue || textValue.length < 10 || analyzeMutation.isPending}
+            disabled={analyzeMutation.isPending}
             className="w-full sm:w-auto font-medium"
           >
             {analyzeMutation.isPending ? (
