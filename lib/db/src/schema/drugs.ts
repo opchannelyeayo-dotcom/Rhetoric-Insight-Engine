@@ -5,7 +5,7 @@ export const drugsTable = pgTable("drugs", {
   name: text("name").notNull(),
   approvalNumber: text("approval_number").notNull(),
   manufacturer: text("manufacturer").notNull(),
-  category: text("category").notNull().default("保健品"),
+  category: text("category").notNull().default("藥品"),
   approvedDate: text("approved_date"),
   ingredients: text("ingredients"),
   claims: text("claims"),

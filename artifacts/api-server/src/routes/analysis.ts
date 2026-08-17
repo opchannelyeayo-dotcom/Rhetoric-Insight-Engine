@@ -4,6 +4,7 @@ import path from "path";
 import { db } from "@workspace/db";
 import { analysisRecordsTable } from "@workspace/db";
 import { runRulesAnalysis, runAiAnalysis } from "../lib/analysis";
+import { forwardToAdmin } from "../lib/adminForward";
 
 const router = Router();
 const upload = multer({
@@ -48,14 +49,36 @@ router.post("/analyze", async (req, res) => {
       })
       .returning();
 
-    res.json({ ...result, id: record.id, createdAt: record.createdAt.toISOString() });
+    const responseBody = {
+      ...result,
+      id: record.id,
+      createdAt: record.createdAt.toISOString(),
+    };
+
+    // Forward to admin backend (fire-and-forget, non-fatal)
+    forwardToAdmin(
+      "/api/integrations/analysis",
+      {
+        id: record.id,
+        inputType: "text",
+        inputSummary: summary,
+        trustScore: result.trustScore,
+        riskLevel: result.riskLevel,
+        tacticTypes,
+        analysisResult: result,
+        createdAt: record.createdAt.toISOString(),
+      },
+      req.log
+    );
+
+    res.json(responseBody);
   } catch (err) {
     req.log.error(err, "analyze error");
     res.status(500).json({ error: "分析失敗，請稍後再試" });
   }
 });
 
-// POST /api/upload-image  (multipart handled manually here)
+// POST /api/upload-image  (multipart handled manually)
 router.post("/upload-image", upload.single("image"), async (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: "請上傳圖片（JPG/PNG/WEBP，最大 5MB）" });
@@ -63,8 +86,8 @@ router.post("/upload-image", upload.single("image"), async (req, res) => {
   }
 
   try {
-    // Try OCR via OpenAI vision if key is available
-    const apiKey = process.env["OPENAI_API_KEY"] || process.env["AI_API_KEY"] || "";
+    const apiKey =
+      process.env["OPENAI_API_KEY"] || process.env["AI_API_KEY"] || "";
     let extractedText = "";
     let ocrSuccess = false;
     let message: string | null = null;
@@ -74,21 +97,34 @@ router.post("/upload-image", upload.single("image"), async (req, res) => {
       const mime = req.file.mimetype;
       const resp = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           model: "gpt-4o-mini",
-          messages: [{
-            role: "user",
-            content: [
-              { type: "text", text: "請將圖片中所有廣告文字完整擷取，只輸出原文，不需要任何解釋。" },
-              { type: "image_url", image_url: { url: `data:${mime};base64,${base64}` } },
-            ],
-          }],
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "請將圖片中所有廣告文字完整擷取，只輸出原文，不需要任何解釋。",
+                },
+                {
+                  type: "image_url",
+                  image_url: { url: `data:${mime};base64,${base64}` },
+                },
+              ],
+            },
+          ],
           max_tokens: 2000,
         }),
       });
       if (resp.ok) {
-        const data = await resp.json() as { choices: Array<{ message: { content: string } }> };
+        const data = (await resp.json()) as {
+          choices: Array<{ message: { content: string } }>;
+        };
         extractedText = data.choices[0]?.message?.content ?? "";
         ocrSuccess = extractedText.length > 0;
       }

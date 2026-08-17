@@ -1,45 +1,36 @@
-# [Project name]
+# 話術透視鏡
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+本 workspace 包含兩個彼此獨立的 Replit Website App：
 
-## Run & Operate
+- `artifacts/rhetoric-xray`：公開前台「話術透視鏡」。
+- `artifacts/admin-console`：獨立後台「話術透視鏡 — 後台管理」，自己的伺服器、session、build 與 deployment URL；不是公開網站的 `/admin` route。
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+## 後台 App 啟動與部署
 
-## Stack
+- 開發：`pnpm admin:dev`
+- Production build：`pnpm admin:build`
+- Production start：`pnpm admin:start`
+- 健康檢查：`GET /health`
+- 伺服器監聽 Replit 提供的 `PORT`（未提供時開發預設 5000）與 `0.0.0.0`。
+- Library 中應以 `artifacts/admin-console` 作為第二個 Website App，顯示名稱設為「話術透視鏡 — 後台管理」。
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+## Replit Secrets
 
-## Where things live
+| 變數 | 必要 | 用途 |
+|---|---:|---|
+| `DATABASE_URL` | 是 | 持久化 PostgreSQL；啟動時自動 migration |
+| `SESSION_SECRET` | 正式環境是 | Cookie session 簽章密鑰，建議 32+ 隨機字元 |
+| `INITIAL_ADMIN_USERNAME` | 否 | 六位數超級管理員帳號，預設 `123123`（也相容 `ADMIN_USERNAME`） |
+| `INITIAL_ADMIN_PASSWORD` | 否 | 六位數密碼，預設 `123123`（也相容 `ADMIN_PASSWORD`）；每次啟動重新安全雜湊 |
+| `PUBLIC_API_TOKEN` | 是 | 公開前台傳送紀錄使用的 Bearer token |
+| `CORS_ORIGINS` | 是 | 逗號分隔的公開前台 origin 白名單 |
+| `PUBLIC_SITE_URL` | 否 | 後台「回首頁」連結 |
+| `NODE_ENV` | 是 | 正式部署設為 `production`，啟用 Secure cookie |
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+公開前台使用 `ADMIN_API_URL=https://<後台獨立部署 URL>` 與相同 `ADMIN_API_TOKEN` 傳送分析與網址掃描紀錄。
 
-## Architecture decisions
+## 安全
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- bcrypt 12 rounds 密碼雜湊；PostgreSQL session store；HttpOnly / SameSite / production Secure cookie。
+- 後台 API 全部有 session 與角色權限檢查；整合 API 使用 Bearer token。
+- migration：`artifacts/admin-console/migrations/0001_init.sql`，啟動時可重複執行。
