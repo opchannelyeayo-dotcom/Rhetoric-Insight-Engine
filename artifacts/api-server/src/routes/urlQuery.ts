@@ -5,11 +5,12 @@ import { forwardToAdmin } from "../lib/adminForward";
 
 const router = Router();
 
-function analyzeUrl(url: string): {
+function analyzeUrl(url: URL): {
   status: "safe" | "suspicious" | "high_risk" | "unknown";
   reason: string;
 } {
-  const lower = url.toLowerCase();
+  const lower = url.href.toLowerCase();
+  const hostname = url.hostname.toLowerCase();
   const highRiskPatterns = [
     /phishing/i,
     /malware/i,
@@ -18,7 +19,7 @@ function analyzeUrl(url: string): {
     /bit\.ly.*health/i,
     /free.*gift.*health/i,
     /miracle.*cure/i,
-    /\.xyz$/i,
+    /(?:^|\.)[^/]*\.xyz(?:[/:]|$)/i,
   ];
   const suspiciousPatterns = [
     /health.*deal/i,
@@ -29,20 +30,18 @@ function analyzeUrl(url: string): {
     /\d{4,}.*pill/i,
     /discount.*drug/i,
   ];
-  const safePatterns = [
-    /fda\.gov/,
-    /mohw\.gov\.tw/,
-    /tfda\.fda\.gov\.tw/,
-    /nih\.gov/,
-    /who\.int/,
-    /cdc\.gov/,
-    /nhi\.gov\.tw/,
-    /gov\.tw/,
-    /edu\.tw/,
+  const trustedDomains = [
+    "fda.gov",
+    "fda.gov.tw",
+    "mohw.gov.tw",
+    "nih.gov",
+    "who.int",
+    "cdc.gov",
+    "nhi.gov.tw",
   ];
 
-  for (const p of safePatterns) {
-    if (p.test(lower))
+  for (const domain of trustedDomains) {
+    if (hostname === domain || hostname.endsWith(`.${domain}`))
       return {
         status: "safe",
         reason: "此網址屬於政府或公信機構官方網域，安全性較高。",
@@ -72,8 +71,7 @@ function analyzeUrl(url: string): {
   ) {
     return {
       status: "unknown",
-      reason:
-        "無法判定：此網址為本機或測試環境位址，系統無法評估安全性。",
+      reason: "無法判定：此網址為本機或測試環境位址，系統無法評估安全性。",
     };
   }
 
@@ -91,8 +89,18 @@ router.post("/url-query", async (req, res) => {
     return;
   }
 
-  const normalized = url.trim();
-  const { status, reason } = analyzeUrl(normalized);
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url.trim());
+    if (!["http:", "https:"].includes(parsedUrl.protocol))
+      throw new Error("unsupported protocol");
+  } catch {
+    res.status(400).json({ error: "請提供有效的 HTTP 或 HTTPS 網址" });
+    return;
+  }
+
+  const normalized = parsedUrl.href;
+  const { status, reason } = analyzeUrl(parsedUrl);
   const isTest =
     normalized.toLowerCase().includes("test") ||
     normalized.includes("localhost");
@@ -102,8 +110,6 @@ router.post("/url-query", async (req, res) => {
       .insert(urlQueriesTable)
       .values({ url: normalized, status, reason, isTest })
       .returning();
-
-    const responseBody = { url: normalized, status, reason };
 
     // Forward to admin backend (fire-and-forget, non-fatal)
     forwardToAdmin(
@@ -116,14 +122,14 @@ router.post("/url-query", async (req, res) => {
         isTest,
         createdAt: record.createdAt.toISOString(),
       },
-      req.log
+      req.log,
     );
-
-    res.json(responseBody);
   } catch (err) {
-    req.log.error(err, "url-query error");
-    res.status(500).json({ error: "查詢失敗，請稍後再試" });
+    // Logging must not make the public lookup unavailable.
+    req.log.error(err, "failed to save url-query record");
   }
+
+  res.json({ url: normalized, status, reason });
 });
 
 export default router;
